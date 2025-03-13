@@ -1,11 +1,7 @@
 import NextAuth from "next-auth"
-
 import CredentialsProvider from "next-auth/providers/credentials"
-
-/// @ts-ignore
-import { Database } from "sqlite-async";
-
-import seed from './../../../db/db'
+import dbConnect from '../../../lib/mongodb'
+import User from '../../../models/User'
 
 export default NextAuth({
     jwt: {
@@ -22,18 +18,21 @@ export default NextAuth({
                 password: { label: "Password", type: "password", placeholder: "Password" },
             },
             async authorize(credentials) {
-                const db = await Database.open('chatsdb.db')
-                await seed(db)
-                const user = await db.get(`SELECT [id], [username], [email]
-                                             FROM [users]
-                                            WHERE [email] = ? 
-                                              AND [password] = ?
-                                            LIMIT 1`, [credentials?.email, credentials?.password])
+                await dbConnect();
+                
+                const user = await User.findOne({
+                    email: credentials?.email,
+                    password: credentials?.password
+                }).select('_id username email');
+
                 if (user) {
-                    return user
-                } else {
-                    return null
+                    return {
+                        id: user._id.toString(),
+                        username: user.username,
+                        email: user.email
+                    };
                 }
+                return null;
             },
         })
     ],
