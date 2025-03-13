@@ -9,10 +9,17 @@ export default async function handler(
     await dbConnect();
     const { email, username, password } = req.body;
 
+    if (!email || !username || !password) {
+        return res.status(400).json({ message: "All fields are required" });
+    }
+
     try {
         // Check if user exists
         const existingUser = await User.findOne({
-            $or: [{ email }, { username }]
+            $or: [
+                { email: email.toLowerCase() }, 
+                { username }
+            ]
         });
 
         if (existingUser) {
@@ -21,7 +28,7 @@ export default async function handler(
 
         // Create new user
         const user = await User.create({
-            email,
+            email: email.toLowerCase(),
             username,
             password
         });
